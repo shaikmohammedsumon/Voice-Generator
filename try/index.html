@@ -1,0 +1,279 @@
+<script>
+    import { useState, useEffect, useRef } from 'react';
+    import { Play, Pause, Square, Volume2 } from 'lucide-react';
+
+    export function TextToSpeech() {
+        const [text, setText] = useState('হ্যালো! টেক্সট টু স্পিচ জেনারেটরে স্বাগতম। এখানে যেকোনো বাংলা টেক্সট লিখুন এবং শুনুন।');
+        const [voices, setVoices] = useState < SpeechSynthesisVoice[] > ([]);
+        const [selectedVoice, setSelectedVoice] = useState < string > ('');
+        const [rate, setRate] = useState(1);
+        const [pitch, setPitch] = useState(1);
+        const [volume, setVolume] = useState(1);
+        const [isSpeaking, setIsSpeaking] = useState(false);
+        const [isPaused, setIsPaused] = useState(false);
+        const utteranceRef = useRef < SpeechSynthesisUtterance | null > (null);
+
+        // Load available Bengali voices only
+        useEffect(() => {
+            const loadVoices = () => {
+                const availableVoices = window.speechSynthesis.getVoices();
+                // Filter for Bengali voices only
+                const bengaliVoices = availableVoices.filter(voice =>
+                    voice.lang.toLowerCase().includes('bn') ||
+                    voice.lang.toLowerCase().includes('bengali') ||
+                    voice.name.toLowerCase().includes('bengali') ||
+                    voice.name.toLowerCase().includes('bangla')
+                );
+                setVoices(bengaliVoices);
+                if (bengaliVoices.length > 0 && !selectedVoice) {
+                    setSelectedVoice(bengaliVoices[0].name);
+                }
+            };
+
+            loadVoices();
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+
+            return () => {
+                window.speechSynthesis.cancel();
+            };
+        }, []);
+
+        const handlePlay = () => {
+            if (!text.trim()) return;
+
+            if (isPaused) {
+                window.speechSynthesis.resume();
+                setIsPaused(false);
+                setIsSpeaking(true);
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voice = voices.find(v => v.name === selectedVoice);
+
+            if (voice) utterance.voice = voice;
+            utterance.rate = rate;
+            utterance.pitch = pitch;
+            utterance.volume = volume;
+
+            utterance.onstart = () => {
+                setIsSpeaking(true);
+                setIsPaused(false);
+            };
+
+            utterance.onend = () => {
+                setIsSpeaking(false);
+                setIsPaused(false);
+            };
+
+            utterance.onerror = () => {
+                setIsSpeaking(false);
+                setIsPaused(false);
+            };
+
+            utteranceRef.current = utterance;
+            window.speechSynthesis.speak(utterance);
+        };
+
+        const handlePause = () => {
+            if (isSpeaking && !isPaused) {
+                window.speechSynthesis.pause();
+                setIsPaused(true);
+                setIsSpeaking(false);
+            }
+        };
+
+        const handleStop = () => {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            setIsPaused(false);
+        };
+
+        const exampleTexts = [
+            "আমি বাংলায় কথা বলতে পারি।",
+            "বাংলাদেশ একটি সুন্দর দেশ।",
+            "আজকের দিনটি অনেক সুন্দর।",
+        ];
+
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+                <div className="max-w-4xl mx-auto">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="bg-indigo-600 p-3 rounded-xl">
+                                <Volume2 className="w-8 h-8 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900">বাংলা টেক্সট টু স্পিচ</h1>
+                                <p className="text-gray-600">আপনার লেখা বাংলা টেক্সট শুনুন</p>
+                            </div>
+                        </div>
+
+                        {/* Text Area */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                বাংলা টেক্সট লিখুন
+                            </label>
+                            <textarea
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                className="w-full h-40 p-4 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all resize-none"
+                                placeholder="এখানে আপনার বাংলা টেক্সট লিখুন বা পেস্ট করুন..."
+                            />
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                                <span className="text-xs text-gray-500">উদাহরণ:</span>
+                                {exampleTexts.map((example, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setText(example)}
+                                        className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                                    >
+                                        উদাহরণ {index + 1}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            {/* Voice Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    ভয়েস নির্বাচন করুন
+                                </label>
+                                <select
+                                    value={selectedVoice}
+                                    onChange={(e) => setSelectedVoice(e.target.value)}
+                                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                                >
+                                    {voices.length === 0 ? (
+                                        <option>কোনো বাংলা ভয়েস পাওয়া যায়নি</option>
+                                    ) : (
+                                        voices.map((voice) => (
+                                            <option key={voice.name} value={voice.name}>
+                                                {voice.name}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
+                                {voices.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                        দুঃখিত! আপনার ব্রাউজারে বাংলা ভয়েস নেই। অনুগ্রহ করে Google Chrome ব্যবহার করুন এবং সিস্টেম সেটিংসে বাংলা ভয়েস ইনস্টল করুন।
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Volume */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Volume: {Math.round(volume * 100)}%
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.1"
+                                    value={volume}
+                                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                />
+                            </div>
+
+                            {/* Speed */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Speed: {rate}x
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="2"
+                                    step="0.1"
+                                    value={rate}
+                                    onChange={(e) => setRate(parseFloat(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                />
+                            </div>
+
+                            {/* Pitch */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Pitch: {pitch}x
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="2"
+                                    step="0.1"
+                                    value={pitch}
+                                    onChange={(e) => setPitch(parseFloat(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Playback Controls */}
+                        <div className="flex gap-4 justify-center">
+                            <button
+                                onClick={handlePlay}
+                                disabled={!text.trim()}
+                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl"
+                            >
+                                <Play className="w-5 h-5" />
+                                {isPaused ? 'Resume' : 'Play'}
+                            </button>
+
+                            <button
+                                onClick={handlePause}
+                                disabled={!isSpeaking}
+                                className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl"
+                            >
+                                <Pause className="w-5 h-5" />
+                                Pause
+                            </button>
+
+                            <button
+                                onClick={handleStop}
+                                disabled={!isSpeaking && !isPaused}
+                                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl"
+                            >
+                                <Square className="w-5 h-5" />
+                                Stop
+                            </button>
+                        </div>
+
+                        {/* Status Indicator */}
+                        {isSpeaking && (
+                            <div className="mt-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-center gap-3">
+                                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                                <span className="text-green-700 font-medium">Speaking...</span>
+                            </div>
+                        )}
+
+                        {isPaused && (
+                            <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl flex items-center gap-3">
+                                <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                                <span className="text-yellow-700 font-medium">Paused</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Info Section */}
+                    <div className="mt-6 bg-white/80 backdrop-blur rounded-xl p-6">
+                        <h2 className="font-semibold text-gray-900 mb-2">কিভাবে ব্যবহার করবেন:</h2>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                            <li>• উপরের টেক্সট এরিয়াত�� বাংলা টেক্সট লিখুন বা পেস্ট করুন</li>
+                            <li>• আপনার পছন্দের বাংলা ভয়েস নির্বাচন করুন</li>
+                            <li>• Speed, Pitch এবং Volume আপনার ইচ্ছামত সেট করুন</li>
+                            <li>• Play বাটনে ক্লিক করে টেক্সট শুনুন</li>
+                            <li>• Pause বাটন দিয়ে সাময়িক থামাতে পারবেন</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+</script>
