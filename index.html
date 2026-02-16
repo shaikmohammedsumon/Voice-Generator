@@ -161,14 +161,14 @@
 
             // voices = speechSynthesis.getVoices().filter(v => v.lang.includes("bn") || v.lang.includes("en"));
             // voices = speechSynthesis.getVoices().filter(v => v.lang.includes("bn"));
-            // voices = speechSynthesis.getVoices();
-            voices = speechSynthesis.getVoices().filter(v =>
-                v.lang.includes("bn") ||
-                v.lang.includes("en") ||
-                v.lang.includes("hi") ||
-                v.lang.includes("ar") ||
-                v.lang.includes("ur")
-            );
+            voices = speechSynthesis.getVoices();
+            // voices = speechSynthesis.getVoices().filter(v =>
+            //     v.lang.includes("bn") ||
+            //     v.lang.includes("en") ||
+            //     v.lang.includes("hi") ||
+            //     v.lang.includes("ar") ||
+            //     v.lang.includes("ur")
+            // );
             voiceSelect.innerHTML = "";
             voices.forEach((voice, i) => {
                 let option = document.createElement("option");
